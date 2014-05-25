@@ -1,8 +1,5 @@
-/*	$OpenBSD: strlen.c,v 1.7 2005/08/08 08:05:37 espie Exp $	*/
-
-/*-
- * Copyright (c) 1990, 1993
- *	The Regents of the University of California.  All rights reserved.
+/* Copyright (c) 2005-2014 Rich Felker, et al. (http://www.musl-libc.org)
+ * Copyright (c) 2014 Alireza Forouzandeh Nezhad (http://www.alirezafn.net)
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -30,18 +27,43 @@
  */
 
 #if !defined(_KERNEL) && !defined(_STANDALONE)
+
 #include <string.h>
+#include <stdint.h>
+#include <limits.h>
+
 #else
-#include <lib/libkern/libkern.h>
+// #include <lib/libkern/libkern.h>
+#error "This type of build is not supported ATM."
 #endif
 
-size_t
-strlen(const char *str)
+#define ALIGN (sizeof(size_t))
+#define ONES ((size_t)-1/UCHAR_MAX)
+#define HIGHS (ONES * (UCHAR_MAX/2+1))
+#define HASZERO(x) ((x)-ONES & ~(x) & HIGHS)
+
+// an inlined version for libc 's internal usage
+
+#ifdef __GNUC__ 
+size_t __inline__ inlined_strlen(const char *s)
 {
-	const char *s;
-
-	for (s = str; *s; ++s)
-		;
-	return (s - str);
+	const char *a = s;
+	const size_t *w;
+	for (; (uintptr_t)s % ALIGN; s++) if (!*s) return s-a;
+	for (w = (const void *)s; !HASZERO(*w); w++);
+	for (s = (const void *)w; *s; s++);
+	return s-a;
 }
+#else
+#warning "inlined_strlen is not available on non-GCC compilers ATM."
+#endif
 
+size_t strlen(const char *s)
+{
+	const char *a = s;
+	const size_t *w;
+	for (; (uintptr_t)s % ALIGN; s++) if (!*s) return s-a;
+	for (w = (const void *)s; !HASZERO(*w); w++);
+	for (s = (const void *)w; *s; s++);
+	return s-a;
+}
