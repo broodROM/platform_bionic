@@ -1,7 +1,7 @@
 /*	$OpenBSD: strcpy.c,v 1.8 2005/08/08 08:05:37 espie Exp $	*/
 
 /*
- * Copyright (c) 1988 Regents of the University of California.
+ * Copyright (c) 2014 AliReza Forouzandeh Nezhad.
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -34,8 +34,6 @@
 char *
 strcpy(char *to, const char *from)
 {
-	char *save = to;
-
-	for (; (*to = *from) != '\0'; ++from, ++to);
-	return(save);
+	memcpy((void *)to,(void *)from,strlen(from)+1);
+	return to;
 }
